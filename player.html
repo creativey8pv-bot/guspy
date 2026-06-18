@@ -1,0 +1,143 @@
+
+<!DOCTYPE html>
+<html lang='th'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>GuSpy Player</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f6f7f8;margin:0;padding:30px;color:#202124;text-align:center}
+.wrap{max-width:760px;margin:auto;background:#fff;border-radius:24px;padding:30px;box-shadow:0 12px 35px rgba(0,0,0,.08)}
+h1{font-size:48px;margin:0 0 6px}
+.sub{color:#666;margin-bottom:24px}
+button{width:100%;padding:16px 20px;border:0;border-radius:14px;background:#25a244;color:white;font-size:20px;font-weight:700;cursor:pointer;margin:8px 0}
+button.dark{background:#111827}
+button.red{background:#dc3545}
+.role{display:none;background:#f1f5f9;border-radius:22px;padding:26px;margin-top:20px}
+.spy{font-size:48px;color:#dc3545;font-weight:900}
+.location{font-size:38px;font-weight:900;color:#111827}
+.job{font-size:28px;color:#344054;margin-top:10px}
+.small{font-size:14px;color:#667085;line-height:1.6}
+.timer{font-size:46px;font-weight:900;margin:20px 0;color:#111827}
+</style>
+</head>
+<body>
+<div class='wrap'>
+<h1>GuSpy</h1>
+<div class='sub'>Player Room สำหรับผู้เล่น</div>
+
+<div id='playerList'></div>
+
+<div class='role' id='roleBox'>
+<div id='roleText'></div>
+<button class='dark' onclick='hideRole()'>ซ่อนบทบาท</button>
+</div>
+
+<div class='timer' id='timer'>--:--</div>
+<button onclick='startTimer()'>เริ่มจับเวลา</button>
+<button class='red' onclick='clearView()'>กลับไปเลือกผู้เล่น</button>
+
+<div class='small'>
+ให้ผู้เล่นเลือกชื่อตัวเอง แล้วกดดูบทบาทแบบส่วนตัว<br>
+หลังดูเสร็จให้กดซ่อนบทบาทก่อนส่งให้คนถัดไป
+</div>
+</div>
+
+<script>
+let game = null;
+let countdown = null;
+let remain = 0;
+
+function decodeGame(){
+ try{
+  if(location.hash.includes('game=')){
+   const payload = location.hash.split('game=')[1];
+   return JSON.parse(decodeURIComponent(escape(atob(payload))));
+  }
+
+  const local = localStorage.getItem('guspy_game');
+  if(local){
+   return JSON.parse(local);
+  }
+
+  return null;
+ }catch(e){
+  return null;
+ }
+}
+
+function load(){
+ game = decodeGame();
+
+ if(!game){
+  document.getElementById('playerList').innerHTML = '<p>ยังไม่มีข้อมูลเกม กรุณาเปิดจาก Player Link ที่สร้างจากหน้า Control</p>';
+  return;
+ }
+
+ let html = '';
+ game.roles.forEach((p, i) => {
+  html += '<button onclick=showRole(' + i + ')>' + p.name + ' - ดูบทบาทของฉัน</button>';
+ });
+
+ document.getElementById('playerList').innerHTML = html;
+ remain = parseInt(game.minutes) * 60;
+ renderTimer();
+}
+
+function showRole(i){
+ const p = game.roles[i];
+
+ document.getElementById('roleBox').style.display = 'block';
+
+ if(p.isSpy){
+  document.getElementById('roleText').innerHTML =
+  '<div class=spy>GU SPY</div>' +
+  '<div class=small>คุณคือสายลับ พยายามเดาสถานที่ และอย่าให้คนอื่นจับได้</div>';
+ }else{
+  document.getElementById('roleText').innerHTML =
+  '<div class=small>สถานที่</div>' +
+  '<div class=location>' + p.location + '</div>' +
+  '<div class=small>อาชีพ</div>' +
+  '<div class=job>' + p.job + '</div>';
+ }
+
+ window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function hideRole(){
+ document.getElementById('roleBox').style.display = 'none';
+ document.getElementById('roleText').innerHTML = '';
+}
+
+function clearView(){
+ hideRole();
+ window.scrollTo({top:0, behavior:'smooth'});
+}
+
+function renderTimer(){
+ const m = Math.floor(remain / 60);
+ const s = remain % 60;
+ document.getElementById('timer').innerText = String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+}
+
+function startTimer(){
+ if(countdown){
+  return;
+ }
+
+ countdown = setInterval(() => {
+  remain--;
+  renderTimer();
+
+  if(remain <= 0){
+   clearInterval(countdown);
+   countdown = null;
+   alert('หมดเวลา โหวตจับสายลับได้เลย');
+  }
+ }, 1000);
+}
+
+load();
+</script>
+</body>
+</html>

@@ -1,0 +1,180 @@
+
+<!DOCTYPE html>
+<html lang='th'>
+<head>
+<meta charset='UTF-8'>
+<meta name='viewport' content='width=device-width, initial-scale=1.0'>
+<title>GuSpy Control</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f6f7f8;margin:0;padding:30px;color:#202124;text-align:center}
+.wrap{max-width:820px;margin:auto;background:#fff;border-radius:24px;padding:30px;box-shadow:0 12px 35px rgba(0,0,0,.08)}
+h1{font-size:48px;margin:0 0 6px}
+.sub{color:#666;margin-bottom:24px}
+input,select{width:100%;box-sizing:border-box;padding:14px 16px;border:1px solid #d0d5dd;border-radius:14px;font-size:18px;margin:8px 0}
+button{width:100%;padding:16px 20px;border:0;border-radius:14px;background:#25a244;color:white;font-size:20px;font-weight:700;cursor:pointer;margin-top:12px}
+button.red{background:#dc3545}
+button.dark{background:#111827}
+.box{background:#f1f5f9;border-radius:18px;padding:18px;margin-top:18px;text-align:left;line-height:1.7}
+.link{background:#fff;border:1px solid #d0d5dd;border-radius:14px;padding:14px;word-break:break-all;margin-top:8px;color:#111}
+.small{font-size:14px;color:#667085}
+.answer{font-size:18px;font-weight:700;color:#111827}
+</style>
+</head>
+<body>
+<div class='wrap'>
+<h1>GuSpy</h1>
+<div class='sub'>Control Room สำหรับคนคุมเกม</div>
+
+<input id='players' value='[ชื่อของแกร]'>
+
+<select id='minutes'>
+<option value='6'>เวลา 6 นาที</option>
+<option value='8' selected>เวลา 8 นาที</option>
+<option value='10'>เวลา 10 นาที</option>
+<option value='12'>เวลา 12 นาที</option>
+</select>
+
+<button onclick='createGame()'>สร้างเกมใหม่</button>
+<button class='dark' onclick='openPlayer()'>เปิด Player Link</button>
+<button class='red' onclick='resetGame()'>รีเซ็ตเกม</button>
+
+<div class='box'>
+<b>Control Link</b>
+<div class='link' id='controlLink'></div>
+<br>
+<b>Player Link สำหรับส่งให้สมาชิก</b>
+<div class='link' id='playerLink'>กดสร้างเกมใหม่ก่อน</div>
+<div class='small'>หลังสร้างเกมแล้ว ให้คัดลอก Player Link ส่งให้สมาชิก หรือกดเปิด Player Link เพื่อเล่นในเครื่องเดียวกัน</div>
+</div>
+
+<div class='box' id='status'>ยังไม่ได้สร้างเกม</div>
+
+<div class='box'>
+<b>วิธีเล่น GuSpy</b><br>
+1. คนคุมเกมกดสร้างเกมใหม่<br>
+2. ระบบจะสุ่มสถานที่ 1 แห่ง และสุ่มสายลับ 1 คน<br>
+3. ผู้เล่นทั่วไปจะเห็นสถานที่และอาชีพ<br>
+4. สายลับจะเห็นคำว่า GU SPY และไม่รู้สถานที่<br>
+5. ผลัดกันถามคำถาม ห้ามถามตรงๆ ว่าสถานที่คืออะไร<br>
+6. เมื่อหมดเวลา ให้โหวตว่าใครคือสายลับ<br>
+7. ถ้าจับถูก ทีมชนะ<br>
+8. ถ้าจับผิด หรือสายลับเดาสถานที่ถูก สายลับชนะ
+</div>
+</div>
+
+<script>
+const locations = {
+'สนามบิน':['นักบิน','พนักงานต้อนรับบนเครื่องบิน','เจ้าหน้าที่ตรวจความปลอดภัย','เจ้าหน้าที่ภาคพื้น','ผู้โดยสาร'],
+'ธนาคาร':['ผู้จัดการสาขา','พนักงานการเงิน','เจ้าหน้าที่สินเชื่อ','รปภ.','ลูกค้า'],
+'ชายหาด':['นักท่องเที่ยว','ไลฟ์การ์ด','พ่อค้าแม่ค้า','ช่างภาพ','นักโต้คลื่น'],
+'โรงละคร':['นักแสดง','ผู้กำกับ','ช่างไฟ','คนขายบัตร','ผู้ชม'],
+'คาสิโน':['ดีลเลอร์','รปภ.','ผู้จัดการคาสิโน','นักพนัน','พนักงานเสิร์ฟ'],
+'วัด':['พระสงฆ์','ไวยาวัจกร','แม่ชี','คนดูแลวัด','ผู้มาทำบุญ'],
+'คณะละครสัตว์':['นักกายกรรม','ตัวตลก','ผู้ฝึกสัตว์','คนขายตั๋ว','ผู้ชม'],
+'งานเลี้ยงบริษัท':['CEO','ผู้จัดงาน','พนักงาน','พิธีกร','แขกรับเชิญ'],
+'ค่ายทหาร':['ผู้บังคับบัญชา','ทหารเกณฑ์','พลซุ่มยิง','แพทย์ทหาร','ช่างเทคนิค'],
+'สปา':['หมอนวด','พนักงานต้อนรับ','ผู้จัดการ','ลูกค้า','ผู้เชี่ยวชาญผิวพรรณ'],
+'สถานทูต':['เอกอัครราชทูต','เจ้าหน้าที่กงสุล','ล่าม','เจ้าหน้าที่รักษาความปลอดภัย','ผู้ขอวีซ่า'],
+'โรงพยาบาล':['แพทย์','พยาบาล','เภสัชกร','เจ้าหน้าที่เวชระเบียน','คนไข้'],
+'โรงแรม':['ผู้จัดการโรงแรม','พนักงานต้อนรับ','แม่บ้าน','เบลบอย','แขก'],
+'ฐานทัพ':['นายพล','ทหาร','ช่างซ่อมอาวุธ','นักข่าวสงคราม','แพทย์สนาม'],
+'สตูดิโอภาพยนตร์':['ผู้กำกับ','นักแสดง','ช่างกล้อง','ช่างแต่งหน้า','โปรดิวเซอร์'],
+'เรือสำราญ':['กัปตัน','พนักงานบริการ','เชฟ','นักท่องเที่ยว','นักดนตรี'],
+'รถไฟ':['พนักงานขับรถไฟ','นายสถานี','พนักงานตรวจตั๋ว','พนักงานบริการ','ผู้โดยสาร'],
+'เรือโจรสลัด':['กัปตันโจรสลัด','ต้นหน','พลปืน','ลูกเรือ','เชลย'],
+'สถานีวิจัยขั้วโลก':['นักวิทยาศาสตร์','นักอุตุนิยมวิทยา','วิศวกร','แพทย์','เจ้าหน้าที่สื่อสาร'],
+'สถานีตำรวจ':['ผู้กำกับ','ตำรวจสายตรวจ','นักสืบ','เจ้าหน้าที่ธุรการ','ผู้แจ้งความ'],
+'ร้านอาหาร':['เชฟ','พนักงานเสิร์ฟ','ผู้จัดการร้าน','พนักงานล้างจาน','ลูกค้า'],
+'โรงเรียน':['ผู้อำนวยการ','ครู','นักเรียน','ภารโรง','เจ้าหน้าที่ธุรการ'],
+'ปั๊มน้ำมัน':['ผู้จัดการสถานี','พนักงานเติมน้ำมัน','ช่างซ่อม','แคชเชียร์','ลูกค้า'],
+'สถานีอวกาศ':['นักบินอวกาศ','นักวิทยาศาสตร์','วิศวกร','ผู้ควบคุมภารกิจ','แพทย์อวกาศ'],
+'เรือดำน้ำ':['ผู้บังคับการ','ช่างเครื่อง','นักเดินเรือ','เจ้าหน้าที่สื่อสาร','ลูกเรือ'],
+'ซูเปอร์มาร์เก็ต':['ผู้จัดการ','แคชเชียร์','พนักงานจัดสินค้า','รปภ.','ลูกค้า'],
+'มหาวิทยาลัย':['อธิการบดี','อาจารย์','นักศึกษา','เจ้าหน้าที่ทะเบียน','นักวิจัย'],
+'บ้านพี่เป้':['พี่เป้','แม่บ้าน','ช่างแอร์','พนักงานส่งพัสดุ','แขกที่มาเยี่ยม'],
+'บ้านพี่อี๊ด':['พี่อี๊ด','แม่บ้าน','ช่างไฟ','พนักงานส่งอาหาร','แขกที่มาเยี่ยม']
+};
+
+let latestPlayerLink = '';
+
+function pick(arr){
+ return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function encodeGame(game){
+ return btoa(unescape(encodeURIComponent(JSON.stringify(game))));
+}
+
+function createGame(){
+ const names = document.getElementById('players').value.split(',').map(x => x.trim()).filter(Boolean);
+
+ if(names.length < 3){
+  alert('ควรมีผู้เล่นอย่างน้อย 3 คน');
+  return;
+ }
+
+ const locationName = pick(Object.keys(locations));
+ const spyIndex = Math.floor(Math.random() * names.length);
+
+ const roles = names.map((name, index) => {
+  if(index === spyIndex){
+   return {
+    name:name,
+    isSpy:true,
+    location:'GU SPY',
+    job:'สายลับ'
+   };
+  }
+
+  return {
+   name:name,
+   isSpy:false,
+   location:locationName,
+   job:pick(locations[locationName])
+  };
+ });
+
+ const game = {
+  createdAt:new Date().toLocaleString('th-TH'),
+  minutes:document.getElementById('minutes').value,
+  location:locationName,
+  spy:names[spyIndex],
+  roles:roles
+ };
+
+ localStorage.setItem('guspy_game', JSON.stringify(game));
+
+ const payload = encodeGame(game);
+ const base = location.href.split('?')[0].replace('control.html','player.html');
+ latestPlayerLink = base + '#game=' + payload;
+
+ document.getElementById('playerLink').innerText = latestPlayerLink;
+
+ document.getElementById('status').innerHTML =
+ '<b>สร้างเกมแล้ว</b><br>' +
+ 'จำนวนผู้เล่น: ' + names.length + ' คน<br>' +
+ 'เวลา: ' + game.minutes + ' นาที<br><br>' +
+ '<div class=answer>เฉลยสำหรับคนคุมเกม</div>' +
+ 'สถานที่: ' + game.location + '<br>' +
+ 'สายลับ: ' + game.spy;
+}
+
+function openPlayer(){
+ if(!latestPlayerLink){
+  alert('กรุณากดสร้างเกมใหม่ก่อน');
+  return;
+ }
+ window.open(latestPlayerLink, '_blank');
+}
+
+function resetGame(){
+ localStorage.removeItem('guspy_game');
+ latestPlayerLink = '';
+ document.getElementById('playerLink').innerText = 'กดสร้างเกมใหม่ก่อน';
+ document.getElementById('status').innerHTML = 'รีเซ็ตเกมแล้ว';
+}
+
+document.getElementById('controlLink').innerText = location.href;
+</script>
+</body>
+</html>
